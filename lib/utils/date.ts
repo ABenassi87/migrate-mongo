@@ -1,6 +1,6 @@
-const { format } = require("date-fns");
+import format from 'date-fns/format';
 
-const now = (dateString = Date.now()) => {
+export function now(dateString = Date.now()): Date {
   const date = new Date(dateString);
   return new Date(
     date.getUTCFullYear(),
@@ -11,11 +11,8 @@ const now = (dateString = Date.now()) => {
     date.getUTCSeconds(),
     date.getUTCMilliseconds()
   );
-};
+}
 
-const nowAsString = () => format(now(), "yyyyMMddHHmmss");
-
-module.exports = {
-  now,
-  nowAsString
-};
+export function nowAsString(): string {
+  return format(now(), 'yyyyMMddHHmmss');
+}

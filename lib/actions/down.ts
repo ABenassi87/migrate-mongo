@@ -1,21 +1,23 @@
-const _ = require("lodash");
-const { promisify } = require("util");
-const fnArgs = require('fn-args');
+import * as _ from 'lodash';
+import { promisify } from 'util';
+import fnArgs from 'fn-args';
 
-const status = require("./status");
-const configFile = require("../env/configFile");
-const migrationsDir = require("../env/migrationsDir");
-const hasCallback = require('../utils/has-callback');
+import { status } from './status';
+import * as migrationsDir from '../env/migrationsDir';
+import * as configFile from '../env/configFile';
 
-module.exports = async (db, client) => {
+import hasCallback from '../utils/has-callback';
+import { Db, MongoClient } from 'mongodb';
+
+export async function down(db: Db, client: MongoClient) {
   const downgraded = [];
   const statusItems = await status(db);
-  const appliedItems = statusItems.filter(item => item.appliedAt !== "PENDING");
+  const appliedItems = statusItems.filter((item) => item.appliedAt !== 'PENDING');
   const lastAppliedItem = _.last(appliedItems);
 
   if (lastAppliedItem) {
     try {
-      const migration = await migrationsDir.loadMigration(lastAppliedItem.fileName);
+      const migration = await migrationsDir.loadMigration(lastAppliedItem.filename);
       const down = hasCallback(migration.down) ? promisify(migration.down) : migration.down;
 
       if (hasCallback(migration.down) && fnArgs(migration.down).length < 3) {
@@ -24,22 +26,19 @@ module.exports = async (db, client) => {
       } else {
         await down(db, client);
       }
-
     } catch (err) {
-      throw new Error(
-        `Could not migrate down ${lastAppliedItem.fileName}: ${err.message}`
-      );
+      throw new Error(`Could not migrate down ${lastAppliedItem.filename}: ${err.message}`);
     }
     const config = await configFile.read();
     const collectionName = config.changelogCollectionName;
     const collection = db.collection(collectionName);
     try {
-      await collection.deleteOne({ fileName: lastAppliedItem.fileName });
-      downgraded.push(lastAppliedItem.fileName);
+      await collection.deleteOne({ fileName: lastAppliedItem.filename });
+      downgraded.push(lastAppliedItem.filename);
     } catch (err) {
       throw new Error(`Could not update changelog: ${err.message}`);
     }
   }
 
   return downgraded;
-};
+}
